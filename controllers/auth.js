@@ -48,13 +48,44 @@ const crearUsuario = async (req, res = response) => {
 };
 
 //controlador del login de usuario
-const loginUsuario = (req, res = response) => {
+const loginUsuario = async (req, res = response) => {
     const { email, password } = req.body;
 
-    res.json({
-        ok: true,
-        msg: 'creando login de usuario /'
-    });
+    try {
+        const dbUsuario = await Usuario.findOne({ email });
+        if (!dbUsuario) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'credenciales no validas'
+            });
+        }
+
+        //validar si el password hace match
+        const validPassword = bcrypt.compareSync(password, dbUsuario.password);
+
+        if (!validPassword) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'credenciales no validas'
+            });
+        }
+
+        //generar el JWT
+        const token = await generarJWT(dbUsuario.id, dbUsuario.name);
+
+        return res.json({
+            ok: true,
+            uid: dbUsuario.id,
+            token,
+            name: dbUsuario.name
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            ok: false,
+            msg: 'Por Favor,comuniquese con el administrador '
+        });
+    }
 };
 
 //controlador de la revalidacion del token
